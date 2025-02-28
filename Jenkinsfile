@@ -3,6 +3,13 @@ pipeline {
 
     stages {
 
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/neamulkabiremon/jenkins-basics.git'
+                sh "ls -ltr"
+                
+            }
+        } 
 
         stage('Setup') {
             steps {
