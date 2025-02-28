@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                cleanWs() // Ensures a clean workspace before cloning
+                cleanWs() // Clean workspace before cloning
                 git branch: 'main', url: 'https://github.com/neamulkabiremon/jenkins-basics.git'
                 sh "ls -ltr"
             }
@@ -12,7 +12,15 @@ pipeline {
 
         stage('Setup') {
             steps {
-                sh "pip install -r requirements.txt"
+                sh '''
+                # Install Python and Pip (if missing)
+                sudo apt update -y
+                sudo apt install -y python3 python3-pip
+                pip3 install --upgrade pip
+                
+                # Install dependencies
+                pip3 install -r requirements.txt
+                '''
             }
         }
         
