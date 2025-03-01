@@ -4,6 +4,9 @@ pipeline {
     environment {
         PIP_NO_CACHE_DIR = "off" // Prevents cache issues
         PATH = "$HOME/.local/bin:$PATH"  // Add Python user directory to PATH
+        DB_HOST = '192.168.12.1'
+        USERNAME = 'neamulkabiremon'
+        PASSWORD = 'password123'
     }
 
     stages {
@@ -46,7 +49,9 @@ pipeline {
 
                 # Run tests
                 pytest || true
+                echo "The DB username: ${USERNAME} and password: ${PASSWORD}"
                 '''
+                
             }
         }
 
