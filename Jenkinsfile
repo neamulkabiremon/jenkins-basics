@@ -33,19 +33,20 @@ pipeline {
             }
         }
 
-    stages {
+        // ✅ Properly closed 'Build' stage
         stage('Build') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'prod-server', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                        echo "Using credentials for user: ${USERNAME}"
+                    echo "Using credentials for user: ${USERNAME}"
 
-                        // Example: Use credentials in a shell command
-                        sh '''
-                        echo "Logging in as $USERNAME"
-                        curl -u $USERNAME:$PASSWORD https://example.com/protected-api
-                        '''   
+                    // Example: Use credentials in a shell command
+                    sh '''
+                    echo "Logging in as $USERNAME"
+                    curl -u $USERNAME:$PASSWORD https://example.com/protected-api
+                    '''   
+                } // ❗ Closing `withCredentials` block correctly
             }
-        }
+        } // ❗ Closing 'Build' stage correctly
 
         stage('Test') {
             steps {
@@ -64,7 +65,6 @@ pipeline {
                 pytest || true
                 echo "The DB username: ${USERNAME} and password: ${PASSWORD}"
                 '''
-                
             }
         }
 
@@ -77,5 +77,5 @@ pipeline {
                 echo "Running Deployment"
             }
         }
-    }
-}
+    } // ❗ Closing 'stages' correctly
+} // ❗ Closing 'pipeline' correctly
