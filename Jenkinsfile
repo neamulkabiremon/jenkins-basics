@@ -5,7 +5,6 @@ pipeline {
         PIP_NO_CACHE_DIR = "off" // Prevents cache issues
         PATH = "$HOME/.local/bin:$PATH"  // Add Python user directory to PATH
         DB_HOST = '192.168.12.1'
-        PROD_SERVER = credentials('prod-server')
     }
 
     stages {
@@ -33,7 +32,6 @@ pipeline {
             }
         }
 
-        // ✅ Properly closed 'Build' stage
         stage('Build') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'prod-server', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
@@ -44,27 +42,29 @@ pipeline {
                     echo "Logging in as $USERNAME"
                     curl -u $USERNAME:$PASSWORD https://example.com/protected-api
                     '''   
-                } // ❗ Closing `withCredentials` block correctly
+                } // ✅ Closing `withCredentials`
             }
-        } // ❗ Closing 'Build' stage correctly
+        } // ✅ Closing 'Build' stage
 
         stage('Test') {
             steps {
-                sh '''
-                # Ensure pytest is available
-                export PATH=$HOME/.local/bin:$PATH
+                withCredentials([usernamePassword(credentialsId: 'prod-server', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    sh '''
+                    # Ensure pytest is available
+                    export PATH=$HOME/.local/bin:$PATH
 
-                # Check if pytest is installed
-                if ! command -v pytest &> /dev/null
-                then
-                    echo "pytest not found, installing..."
-                    pip3 install --user pytest || true
-                fi
+                    # Check if pytest is installed
+                    if ! command -v pytest &> /dev/null
+                    then
+                        echo "pytest not found, installing..."
+                        pip3 install --user pytest || true
+                    fi
 
-                # Run tests
-                pytest || true
-                echo "The DB username: ${USERNAME} and password: ${PASSWORD}"
-                '''
+                    # Run tests
+                    pytest || true
+                    echo "The DB username: $USERNAME and password: $PASSWORD"
+                    '''
+                }
             }
         }
 
@@ -77,5 +77,5 @@ pipeline {
                 echo "Running Deployment"
             }
         }
-    } // ❗ Closing 'stages' correctly
-} // ❗ Closing 'pipeline' correctly
+    } // ✅ Closing `stages` correctly
+} // ✅ Closing `pipeline` correctly
