@@ -34,36 +34,39 @@ pipeline {
 
         stage('Build') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'prod-server', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    echo "Using credentials for user: ${USERNAME}"
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'prod-server', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        echo "Using credentials for user: ${USERNAME}"
 
-                    // Example: Use credentials in a shell command
-                    sh '''
-                    echo "Logging in as $USERNAME"
-                    curl -u $USERNAME:$PASSWORD https://example.com/protected-api
-                    '''   
-                } // ✅ Closing `withCredentials`
+                        sh '''
+                        echo "Logging in as $USERNAME"
+                        curl -u $USERNAME:$PASSWORD https://example.com/protected-api
+                        '''
+                    }
+                }
             }
-        } // ✅ Closing 'Build' stage
+        }
 
         stage('Test') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'prod-server', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                    sh '''
-                    # Ensure pytest is available
-                    export PATH=$HOME/.local/bin:$PATH
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'prod-server', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        sh '''
+                        # Ensure pytest is available
+                        export PATH=$HOME/.local/bin:$PATH
 
-                    # Check if pytest is installed
-                    if ! command -v pytest &> /dev/null
-                    then
-                        echo "pytest not found, installing..."
-                        pip3 install --user pytest || true
-                    fi
+                        # Check if pytest is installed
+                        if ! command -v pytest &> /dev/null
+                        then
+                            echo "pytest not found, installing..."
+                            pip3 install --user pytest || true
+                        fi
 
-                    # Run tests
-                    pytest || true
-                    echo "The DB username: $USERNAME and password: $PASSWORD"
-                    '''
+                        # Run tests
+                        pytest || true
+                        echo "The DB username: $USERNAME and password: $PASSWORD"
+                        '''
+                    }
                 }
             }
         }
@@ -77,5 +80,5 @@ pipeline {
                 echo "Running Deployment"
             }
         }
-    } // ✅ Closing `stages` correctly
-} // ✅ Closing `pipeline` correctly
+    }
+}
