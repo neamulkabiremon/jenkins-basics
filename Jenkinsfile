@@ -5,8 +5,7 @@ pipeline {
         PIP_NO_CACHE_DIR = "off" // Prevents cache issues
         PATH = "$HOME/.local/bin:$PATH"  // Add Python user directory to PATH
         DB_HOST = '192.168.12.1'
-        USERNAME = 'neamulkabiremon'
-        PASSWORD = 'password123'
+        PROD_SERVER = credentials('prod-server')
     }
 
     stages {
@@ -31,6 +30,20 @@ pipeline {
                 # Install dependencies
                 pip3 install --user -r requirements.txt || true
                 '''
+            }
+        }
+
+    stages {
+        stage('Build') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'prod-server', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                        echo "Using credentials for user: ${USERNAME}"
+
+                        // Example: Use credentials in a shell command
+                        sh '''
+                        echo "Logging in as $USERNAME"
+                        curl -u $USERNAME:$PASSWORD https://example.com/protected-api
+                        '''   
             }
         }
 
