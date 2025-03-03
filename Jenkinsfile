@@ -2,82 +2,59 @@ pipeline {
     agent any
 
     environment {
-        PIP_NO_CACHE_DIR = "off" // Prevents cache issues
-        PATH = "$HOME/.local/bin:$PATH"  // Add Python user directory to PATH
-        DB_HOST = '192.168.12.1'
+        SERVER_IP = credentials('prod-server-ip')
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                cleanWs() // Cleans workspace
-                git branch: 'main', url: 'https://github.com/neamulkabiremon/jenkins-basics.git'
-                sh "ls -ltr"
-            }
-        }
-
         stage('Setup') {
             steps {
                 sh '''
-                # Ensure Python3 and Pip3 are installed
-                sudo apt update -y
-                sudo apt install -y python3 python3-pip || true
-
-                # Ensure pip3 is upgraded
-                pip3 install --upgrade pip || true
+                # Ensure pip is up to date.
+                pip install --upgrade pip
 
                 # Install dependencies
-                pip3 install --user -r requirements.txt || true
+                pip install -r requirements.txt
                 '''
-            }
-        }
-
-        stage('Build') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'prod-server', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                        echo "Using credentials for user: ${USERNAME}"
-
-                        sh '''
-                        echo "Logging in as $USERNAME"
-                        curl -u $USERNAME:$PASSWORD https://example.com/protected-api
-                        '''
-                    }
-                }
             }
         }
 
         stage('Test') {
             steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'prod-server', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-                        sh '''
-                        # Ensure pytest is available
-                        export PATH=$HOME/.local/bin:$PATH
-
-                        # Check if pytest is installed
-                        if ! command -v pytest &> /dev/null
-                        then
-                            echo "pytest not found, installing..."
-                            pip3 install --user pytest || true
-                        fi
-
-                        # Run tests
-                        pytest || true
-                        echo "The DB username: $USERNAME and password: $PASSWORD"
-                        '''
-                    }
-                }
+                sh '''
+                # Ensure pytest is installed
+                if ! command -v pytest &> /dev/null
+                then
+                    echo "pytest not found, installing..."
+                    pip install pytest || true
+                fi
+                
+                # Run tests
+                pytest || true
+                '''
             }
         }
 
-        stage('Deployment') {
-            input {
-                message "Do you want to proceed further?"
-                ok "Yes"
-            }
+        stage('Package code') {
             steps {
-                echo "Running Deployment"
+                sh "zip -r myapp.zip ./* -x '*.git*'"
+                sh "ls -lart"
+            }
+        }
+
+        stage('Deploy to Prod') {
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'ssh-key', keyFileVariable: 'MY_SSH_KEY', usernameVariable: 'username')]) {
+                    sh '''
+                    scp -i $MY_SSH_KEY -o StrictHostKeyChecking=no myapp.zip  ${username}@${SERVER_IP}:/home/ec2-user/
+                    ssh -i $MY_SSH_KEY -o StrictHostKeyChecking=no ${username}@${SERVER_IP} << EOF
+                        unzip -o /home/ec2-user/myapp.zip -d /home/ec2-user/app/
+                        source app/venv/bin/activate
+                        cd /home/ec2-user/app/
+                        pip install -r requirements.txt
+                        sudo systemctl restart flaskapp.service
+EOF
+                    '''
+                }
             }
         }
     }
